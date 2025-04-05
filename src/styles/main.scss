@@ -1,0 +1,68 @@
+.landing {
+  font-family: "Poppins", sans-serif;
+  overflow: hidden;
+  position: relative;
+
+  .header {
+    position: absolute;
+    top: 0;
+    width: 100%;
+    padding: 1rem 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 3;
+
+    .logo {
+      font-size: 1.8rem;
+      font-weight: bold;
+      color: #fff;
+    }
+
+    .nav {
+      ul {
+        list-style: none;
+        display: flex;
+        gap: 2rem;
+
+        li {
+          a {
+            text-decoration: none;
+            color: #fff;
+            font-size: 1rem;
+            transition: color 0.3s ease;
+            &:hover {
+              color: #f0a500;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .content {
+    height: 100vh;
+    width: 100vw;
+
+    &::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: url("../../public/bg.png") no-repeat top center/cover;
+      z-index: -1; // Asl kontent ustida ko'rinishi uchun
+    }
+
+    .hero {
+      display: flex;
+      h1 {
+        font-size: 3rem;
+        color: #fff;
+        margin-bottom: 1rem;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+      }
+    }
+  }
+}
