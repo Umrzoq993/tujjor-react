@@ -1,4 +1,4 @@
-// NavigationService.js
+// src/NavigationService.js
 let navigateFunction = null;
 
 export const setNavigate = (nav) => {

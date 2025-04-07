@@ -1,32 +1,32 @@
-import axios from "axios";
-import axiosClient from "./axiosClient";
-import { jwtDecode } from "jwt-decode";
+// src/api/auth.js
+import axiosClient from "../axiosConfig";
+import { jwtDecode } from "jwt-decode"; // jwt-decode default eksport
 import { navigate } from "../NavigationService";
 
 const API_URL = "http://127.0.0.1:8000"; // Django backend
 
 // 1) Register physical user
 export async function registerPhysical({ username, password, phone_number }) {
-  const res = await axios.post(`${API_URL}/api/accounts/register/`, {
+  const res = await axiosClient.post(`${API_URL}/api/accounts/register/`, {
     username,
     password,
     phone_number,
   });
-  return res.data; // { id, username, is_active=false, etc. }
+  return res.data; // Masalan, { id, username, is_active: false, ... }
 }
 
 // 2) Verify phone
 export async function verifyPhone({ username, code }) {
-  const res = await axios.post(`${API_URL}/api/accounts/verify-phone/`, {
+  const res = await axiosClient.post(`${API_URL}/api/accounts/verify-phone/`, {
     username,
     code,
   });
-  return res.data; // {detail: "..."}
+  return res.data; // Masalan, { detail: "..." }
 }
 
 // 3) Login -> JWT
 export async function login({ username, password }) {
-  const res = await axios.post(`${API_URL}/api/token/`, {
+  const res = await axiosClient.post(`${API_URL}/api/token/`, {
     username,
     password,
   });
@@ -37,14 +37,14 @@ export async function login({ username, password }) {
   return res.data;
 }
 
-// 4) logout
+// 4) Logout: localStorage tozalanib, login sahifasiga yo'naltirish
 export function logout() {
   localStorage.removeItem("access_token");
   localStorage.removeItem("refresh_token");
   navigate("/login");
 }
 
-// 5) get token, decode role
+// 5) Get token, decode role
 export function getAccessToken() {
   return localStorage.getItem("access_token");
 }
@@ -53,23 +53,23 @@ export function getUserRole() {
   if (!token) return null;
   try {
     const decoded = jwtDecode(token);
-    return decoded.role || null; // 'admin','operator','courier','physical','legal'
+    return decoded.role || null; // misol: "admin", "operator", "courier", "physical", "legal"
   } catch (e) {
     return null;
   }
 }
 
-// 6) admin user-list, user-detail (Misol)
+// 6) Admin user-list, user-detail (Misol)
 export async function listUsers() {
   const token = getAccessToken();
-  const res = await axios.get(`${API_URL}/api/accounts/users/`, {
+  const res = await axiosClient.get(`${API_URL}/api/accounts/users/`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  return res.data; // [ {id, username, role, ...}, ... ]
+  return res.data; // Masalan, [ { id, username, role, ... }, ... ]
 }
 export async function getUserDetail(id) {
   const token = getAccessToken();
-  const res = await axios.get(`${API_URL}/api/accounts/users/${id}/`, {
+  const res = await axiosClient.get(`${API_URL}/api/accounts/users/${id}/`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   return res.data;

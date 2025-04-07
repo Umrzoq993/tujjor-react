@@ -1,6 +1,5 @@
-// src/routes/AppRouter.jsx
-import React from "react";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import React, { useEffect } from "react";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 
 import LandingPage from "../pages/LandingPage";
@@ -24,12 +23,21 @@ import AdminAllUsers from "../pages/admin/AdminAllUsers";
 import AdminHistoryPage from "../pages/admin/AdminHistoryPage";
 import AdminLayout from "../layouts/AdminLayout";
 
-export default function AppRouter() {
+import { setNavigate } from "../NavigationService";
+
+function AppRouterComponent({ setNavigate }) {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Set navigate function for global navigation service
+    setNavigate(navigate);
+  }, [setNavigate, navigate]);
+
   return (
-    <BrowserRouter>
+    <>
       <Navbar />
       <Routes>
-        {/* Public */}
+        {/* Public routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register-physical" element={<RegisterPhysicalPage />} />
@@ -101,7 +109,7 @@ export default function AppRouter() {
           }
         />
 
-        {/* Admin route with AdminLayout */}
+        {/* Admin routes with AdminLayout */}
         <Route path="/admin" element={<AdminLayout />}>
           <Route path="shipments" element={<AdminAllShipments />} />
           <Route path="users" element={<AdminAllUsers />} />
@@ -111,6 +119,14 @@ export default function AppRouter() {
         {/* 404 */}
         <Route path="*" element={<div>Not Found</div>} />
       </Routes>
+    </>
+  );
+}
+
+export default function AppRouter({ setNavigate }) {
+  return (
+    <BrowserRouter>
+      <AppRouterComponent setNavigate={setNavigate} />
     </BrowserRouter>
   );
 }

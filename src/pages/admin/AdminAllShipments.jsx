@@ -1,15 +1,25 @@
 // src/pages/admin/AdminAllShipments.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import styled from "styled-components";
 import ReactPaginate from "react-paginate";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
+
 import {
   listShipments,
   createShipment,
   updateShipment,
   deleteShipment,
 } from "../../api/shipments";
+
+// react-js-dialog-box
 import { ReactDialogBox } from "react-js-dialog-box";
-import "react-js-dialog-box/dist/index.css"; // react-js-dialog-box style
+import "react-js-dialog-box/dist/index.css";
+
+// Add Shipment form
+import AddShipmentDialog from "../../components/AddShipmentDialog";
+// PDF view
+import ShipmentPDFView from "../../components/ShipmentPDFView";
 
 export default function AdminAllShipments() {
   // Data states
@@ -22,19 +32,31 @@ export default function AdminAllShipments() {
   const [error, setError] = useState("");
   const [expandedRowId, setExpandedRowId] = useState(null);
 
-  // Search, filter
+  // Search & filter
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
-  // Dialog states
+  // Dialog states (Add, Edit, Delete)
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
-  // Form states for add/edit
-  const [formTrackingCode, setFormTrackingCode] = useState("");
-  const [formReceiverName, setFormReceiverName] = useState("");
+  // Form state (Add/Edit)
+  const [formData, setFormData] = useState({
+    receiverName: "",
+    receiverPhone: "",
+    weight: "",
+    pickupType: "office_dropoff",
+    deliveryType: "office_pickup",
+    paymentResp: "sender",
+  });
+
+  // Edit/Delete ID
   const [editShipmentId, setEditShipmentId] = useState(null);
+
+  // PDF states
+  const [pdfShipment, setPdfShipment] = useState(null);
+  const pdfRef = useRef(null); // hidden container for PDF rendering
 
   useEffect(() => {
     loadData();
@@ -42,7 +64,6 @@ export default function AdminAllShipments() {
 
   async function loadData() {
     try {
-      // Parametrlar: page, search, status
       const params = {
         page,
         search: searchTerm || undefined,
@@ -61,72 +82,86 @@ export default function AdminAllShipments() {
     }
   }
 
-  // react-paginate
+  // Pagination
   function handlePageChange({ selected }) {
     setPage(selected + 1);
   }
 
-  // expand row
+  // Expand row
   function handleRowClick(id) {
     setExpandedRowId(expandedRowId === id ? null : id);
   }
 
-  // search
+  // Search & filter
   function handleSearchChange(e) {
     setSearchTerm(e.target.value);
     setPage(1);
   }
-
-  // filter
   function handleStatusFilterChange(e) {
     setStatusFilter(e.target.value);
     setPage(1);
   }
 
-  // ============ ADD SHIPMENT ============
+  // ========== ADD SHIPMENT ==========
   function openAddDialog() {
-    setFormTrackingCode("");
-    setFormReceiverName("");
+    setFormData({
+      receiverName: "",
+      receiverPhone: "",
+      weight: "",
+      pickupType: "office_dropoff",
+      deliveryType: "office_pickup",
+      paymentResp: "sender",
+    });
     setShowAddDialog(true);
   }
   async function handleAddShipment() {
     try {
-      // minimal misol
       await createShipment({
-        tracking_code: formTrackingCode,
-        receiver_name: formReceiverName,
-        weight: 1.5, // misol
-        // ...boshqa zarur maydonlar
+        receiver_name: formData.receiverName,
+        receiver_phone: formData.receiverPhone,
+        weight: parseFloat(formData.weight),
+        pickup_type: formData.pickupType,
+        delivery_type: formData.deliveryType,
+        payment_responsibility: formData.paymentResp,
       });
       setShowAddDialog(false);
       loadData();
     } catch (err) {
-      console.error("Add shipment xato", err);
+      console.error("Add shipment xato:", err);
     }
   }
 
-  // ============ EDIT SHIPMENT ============
+  // ========== EDIT SHIPMENT ==========
   function openEditDialog(shipment) {
     setEditShipmentId(shipment.id);
-    setFormTrackingCode(shipment.tracking_code);
-    setFormReceiverName(shipment.receiver_name);
+    setFormData({
+      receiverName: shipment.receiver_name,
+      receiverPhone: shipment.receiver_phone || "",
+      weight: shipment.weight,
+      pickupType: shipment.pickup_type,
+      deliveryType: shipment.delivery_type,
+      paymentResp: shipment.payment_responsibility,
+    });
     setShowEditDialog(true);
   }
   async function handleEditShipment() {
     try {
       await updateShipment(editShipmentId, {
-        tracking_code: formTrackingCode,
-        receiver_name: formReceiverName,
-        // ...
+        receiver_name: formData.receiverName,
+        receiver_phone: formData.receiverPhone,
+        weight: parseFloat(formData.weight),
+        pickup_type: formData.pickupType,
+        delivery_type: formData.deliveryType,
+        payment_responsibility: formData.paymentResp,
       });
       setShowEditDialog(false);
       loadData();
     } catch (err) {
-      console.error("Edit shipment xato", err);
+      console.error("Edit shipment xato:", err);
     }
   }
 
-  // ============ DELETE SHIPMENT ============
+  // ========== DELETE SHIPMENT ==========
   function openDeleteDialog(shipment) {
     setEditShipmentId(shipment.id);
     setShowDeleteDialog(true);
@@ -137,8 +172,31 @@ export default function AdminAllShipments() {
       setShowDeleteDialog(false);
       loadData();
     } catch (err) {
-      console.error("Delete xato", err);
+      console.error("Delete shipment xato:", err);
     }
+  }
+
+  // ========== PDF GENERATE ==========
+  async function handleGeneratePdf(shipment) {
+    setPdfShipment(shipment);
+    // wait for render
+    setTimeout(async () => {
+      if (!pdfRef.current) return;
+      const canvas = await html2canvas(pdfRef.current, { scale: 2 });
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({
+        orientation: "p",
+        unit: "px",
+        format: "a4",
+      });
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const htmlWidth = canvas.width;
+      const htmlHeight = canvas.height;
+      const ratio = htmlHeight / htmlWidth;
+      const pdfHeight = pdfWidth * ratio;
+      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`shipment_${shipment.tracking_code || "N/A"}.pdf`);
+    }, 200);
   }
 
   const pageCount = Math.ceil(totalCount / pageSize);
@@ -148,7 +206,6 @@ export default function AdminAllShipments() {
       <h2>All Shipments (Admin)</h2>
       {error && <ErrorMsg>{error}</ErrorMsg>}
 
-      {/* SEARCH & FILTER & ADD */}
       <TopBar>
         <div>
           <label>Search: </label>
@@ -156,7 +213,7 @@ export default function AdminAllShipments() {
             type="text"
             value={searchTerm}
             onChange={handleSearchChange}
-            placeholder="Search by tracking code or receiver..."
+            placeholder="Tracking code or receiver..."
           />
         </div>
         <div>
@@ -166,13 +223,12 @@ export default function AdminAllShipments() {
             <option value="client_created">client_created</option>
             <option value="approved">approved</option>
             <option value="in_transit">in_transit</option>
-            {/* ... Boshqa statuslar */}
+            {/* ... other statuses */}
           </select>
         </div>
         <button onClick={openAddDialog}>+ Add Shipment</button>
       </TopBar>
 
-      {/* JADVAL */}
       <TableWrapper>
         <table>
           <thead>
@@ -198,6 +254,9 @@ export default function AdminAllShipments() {
                         <button onClick={() => openDeleteDialog(sh)}>
                           Delete
                         </button>
+                        <button onClick={() => handleGeneratePdf(sh)}>
+                          Generate PDF
+                        </button>
                       </ActionButtons>
                     </td>
                   </tr>
@@ -209,12 +268,15 @@ export default function AdminAllShipments() {
                             <strong>Sender:</strong> {sh.sender_name}
                           </p>
                           <p>
-                            <strong>Origin branch:</strong>{" "}
+                            <strong>Origin Branch:</strong>{" "}
                             {sh.origin_branch_name}
                           </p>
                           <p>
-                            <strong>Destination:</strong>{" "}
+                            <strong>Destination Branch:</strong>{" "}
                             {sh.destination_branch_name}
+                          </p>
+                          <p>
+                            <strong>Receiver Phone:</strong> {sh.receiver_phone}
                           </p>
                           <p>
                             <strong>Weight:</strong> {sh.weight}
@@ -232,7 +294,10 @@ export default function AdminAllShipments() {
                             <strong>Payment Resp.:</strong>{" "}
                             {sh.payment_responsibility}
                           </p>
-                          {/* ... Boshqa ma'lumotlar */}
+                          <p>
+                            <strong>Assigned Courier:</strong>{" "}
+                            {sh.assigned_courier || "N/A"}
+                          </p>
                         </ExpandedContent>
                       </td>
                     </tr>
@@ -244,7 +309,6 @@ export default function AdminAllShipments() {
         </table>
       </TableWrapper>
 
-      {/* PAGINATION */}
       {pageCount > 1 && (
         <StyledPaginate
           previousLabel={"<<"}
@@ -258,103 +322,74 @@ export default function AdminAllShipments() {
         />
       )}
 
-      {/* ADD DIALOG */}
+      {/* Add dialog */}
       {showAddDialog && (
         <DialogOverlay>
           <ReactDialogBox
             closeBox={() => setShowAddDialog(false)}
-            // react-js-dialog-box props
             modalWidth="450px"
             headerText="Add Shipment"
-            bodyElement={
-              <DialogBody>
-                <label>Tracking Code</label>
-                <input
-                  type="text"
-                  value={formTrackingCode}
-                  onChange={(e) => setFormTrackingCode(e.target.value)}
-                />
-                <label>Receiver Name</label>
-                <input
-                  type="text"
-                  value={formReceiverName}
-                  onChange={(e) => setFormReceiverName(e.target.value)}
-                />
-                {/* ... boshqa maydonlar agar kerak bo'lsa */}
-              </DialogBody>
-            }
-            footerElement={
-              <DialogFooter>
-                <button onClick={handleAddShipment}>Save</button>
-                <button onClick={() => setShowAddDialog(false)}>Cancel</button>
-              </DialogFooter>
-            }
-          />
+          >
+            <AddShipmentDialog
+              formData={formData}
+              setFormData={setFormData}
+              onSave={handleAddShipment}
+              onCancel={() => setShowAddDialog(false)}
+            />
+          </ReactDialogBox>
         </DialogOverlay>
       )}
 
-      {/* EDIT DIALOG */}
+      {/* Edit dialog */}
       {showEditDialog && (
         <DialogOverlay>
           <ReactDialogBox
             closeBox={() => setShowEditDialog(false)}
             modalWidth="450px"
             headerText="Edit Shipment"
-            bodyElement={
-              <DialogBody>
-                <label>Tracking Code</label>
-                <input
-                  type="text"
-                  value={formTrackingCode}
-                  onChange={(e) => setFormTrackingCode(e.target.value)}
-                />
-                <label>Receiver Name</label>
-                <input
-                  type="text"
-                  value={formReceiverName}
-                  onChange={(e) => setFormReceiverName(e.target.value)}
-                />
-                {/* ... */}
-              </DialogBody>
-            }
-            footerElement={
-              <DialogFooter>
-                <button onClick={handleEditShipment}>Save</button>
-                <button onClick={() => setShowEditDialog(false)}>Cancel</button>
-              </DialogFooter>
-            }
-          />
+          >
+            <AddShipmentDialog
+              formData={formData}
+              setFormData={setFormData}
+              onSave={handleEditShipment}
+              onCancel={() => setShowEditDialog(false)}
+            />
+          </ReactDialogBox>
         </DialogOverlay>
       )}
 
-      {/* DELETE confirm DIALOG */}
+      {/* Delete dialog */}
       {showDeleteDialog && (
         <DialogOverlay>
           <ReactDialogBox
             closeBox={() => setShowDeleteDialog(false)}
             modalWidth="400px"
             headerText="Delete Shipment"
-            bodyElement={
-              <DialogBody>
-                <p>Are you sure you want to delete this shipment?</p>
-              </DialogBody>
-            }
-            footerElement={
-              <DialogFooter>
-                <button onClick={handleDeleteShipment}>Yes, delete</button>
-                <button onClick={() => setShowDeleteDialog(false)}>
-                  Cancel
-                </button>
-              </DialogFooter>
-            }
-          />
+          >
+            <DialogBody>
+              <p>Are you sure you want to delete this shipment?</p>
+            </DialogBody>
+            <DialogFooter>
+              <button onClick={handleDeleteShipment}>Yes, delete</button>
+              <button onClick={() => setShowDeleteDialog(false)}>Cancel</button>
+            </DialogFooter>
+          </ReactDialogBox>
         </DialogOverlay>
       )}
+
+      {/* Hidden PDF container */}
+      <PdfHiddenContainer>
+        {pdfShipment && (
+          <div ref={pdfRef}>
+            <ShipmentPDFView shipment={pdfShipment} />
+          </div>
+        )}
+      </PdfHiddenContainer>
     </Container>
   );
 }
 
-// ========== Styled components ==========
+// ========== Styled Components ==========
 
 const Container = styled.div`
   padding: 1rem;
@@ -372,6 +407,12 @@ const TopBar = styled.div`
   display: flex;
   gap: 1rem;
   margin-bottom: 1rem;
+  align-items: center;
+  div {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
   button {
     background: #333;
     color: #fff;
@@ -437,7 +478,6 @@ const StyledPaginate = styled(ReactPaginate)`
   gap: 0.5rem;
   list-style: none;
   margin-top: 1rem;
-
   li a {
     padding: 0.3rem 0.6rem;
     border: 1px solid #ccc;
@@ -459,7 +499,7 @@ const StyledPaginate = styled(ReactPaginate)`
 // react-js-dialog-box style
 const DialogOverlay = styled.div`
   .dialogboxOverlay {
-    z-index: 9999; /* modal ustun turishi uchun */
+    z-index: 9999;
   }
 `;
 
@@ -470,7 +510,8 @@ const DialogBody = styled.div`
   label {
     font-weight: 500;
   }
-  input {
+  input,
+  select {
     padding: 0.4rem;
     border: 1px solid #ccc;
     border-radius: 4px;
@@ -491,4 +532,10 @@ const DialogFooter = styled.div`
       background: #555;
     }
   }
+`;
+
+const PdfHiddenContainer = styled.div`
+  position: absolute;
+  left: -9999px;
+  top: -9999px;
 `;
