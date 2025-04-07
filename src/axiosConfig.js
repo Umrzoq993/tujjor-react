@@ -1,5 +1,5 @@
 // src/axiosConfig.js
-import axiosClient from "./api/axiosClient";
+import axios from "axios";
 import { toast } from "react-toastify";
 
 // Auth util funksiyalari (o'zingizning auth.js dan)
