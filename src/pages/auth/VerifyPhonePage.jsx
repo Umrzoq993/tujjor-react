@@ -1,15 +1,6 @@
 // src/pages/auth/VerifyPhonePage.jsx
-
 import React, { useState } from "react";
 import axios from "axios";
-import {
-  Container,
-  Typography,
-  TextField,
-  Button,
-  Box,
-  Alert,
-} from "@mui/material";
 
 const API_URL = "http://127.0.0.1:8000";
 
@@ -24,62 +15,44 @@ function VerifyPhonePage() {
     setError("");
     setSuccess("");
     try {
-      const payload = { username, code };
-      const res = await axios.post(
-        `${API_URL}/api/accounts/verify-phone/`,
-        payload
-      );
+      await axios.post(`${API_URL}/api/accounts/verify-phone/`, {
+        username,
+        code,
+      });
       setSuccess("Telefon tasdiqlandi. Endi login qilishingiz mumkin!");
     } catch (err) {
       if (err.response && err.response.data) {
-        setError(err.response.data.detail || "Kod tasdiqlashda xatolik");
+        setError(err.response.data.detail || "Kod xato");
       } else {
-        setError("Tarmoq yoki server xatoligi");
+        setError("Tarmoq yoki server xatolik");
       }
     }
   };
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Telefon tasdiqlash
-      </Typography>
+    <div className="container">
+      <h2>SMS Kod Tasdiqlash</h2>
+      {error && <div className="message-error">{error}</div>}
+      {success && <div className="message-success">{success}</div>}
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          {success}
-        </Alert>
-      )}
-
-      <Box
-        component="form"
-        onSubmit={handleSubmit}
-        sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-      >
-        <TextField
-          label="Username"
+      <form onSubmit={handleSubmit}>
+        <input
+          className="minimal-input"
+          placeholder="Username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          required
         />
-
-        <TextField
-          label="SMS Code"
+        <input
+          className="minimal-input"
+          placeholder="SMS Code"
           value={code}
           onChange={(e) => setCode(e.target.value)}
-          required
         />
-
-        <Button variant="contained" color="primary" type="submit">
+        <button className="minimal-button" type="submit">
           Tasdiqlash
-        </Button>
-      </Box>
-    </Container>
+        </button>
+      </form>
+    </div>
   );
 }
 

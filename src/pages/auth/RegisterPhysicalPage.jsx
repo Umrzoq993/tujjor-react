@@ -1,108 +1,87 @@
 // src/pages/auth/RegisterPhysicalPage.jsx
-
 import React, { useState } from "react";
-import axios from "axios";
+import styled from "styled-components";
+import { registerPhysical } from "../../api/auth";
 
-// Material UI importlari
-import {
-  Container,
-  Typography,
-  TextField,
-  Button,
-  Box,
-  Alert,
-} from "@mui/material";
-
-const API_URL = "http://127.0.0.1:8000";
-
-function RegisterPhysicalPage() {
+export default function RegisterPhysicalPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const [phone, setPhone] = useState("");
+  const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setMsg("");
     setError("");
-    setSuccess("");
     try {
-      // Foydalanuvchi ma’lumotlari
-      const payload = {
-        username,
-        password,
-        phone_number: phoneNumber,
-      };
-
-      // `POST /api/accounts/register/`
-      const res = await axios.post(
-        `${API_URL}/api/accounts/register/`,
-        payload
-      );
-      setSuccess(
-        "Siz muvaffaqiyatli ro‘yxatdan o‘tdingiz! Endi SMS code orqali tasdiqlang."
-      );
+      await registerPhysical({ username, password, phone_number: phone });
+      setMsg("Ro‘yxatdan o‘tildi! SMS code bilan tasdiqlang.");
     } catch (err) {
-      if (err.response && err.response.data) {
-        setError(err.response.data.detail || "Ro‘yxatdan o‘tishda xatolik");
-      } else {
-        setError("Tarmoq yoki server xatoligi yuz berdi");
-      }
+      setError(err.response?.data?.detail || "Xatolik yuz berdi");
     }
   };
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Ro'yxatdan o'tish (Jismoniy shaxs)
-      </Typography>
-
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
-      {success && (
-        <Alert severity="success" sx={{ mb: 2 }}>
-          {success}
-        </Alert>
-      )}
-
-      <Box
-        component="form"
-        onSubmit={handleSubmit}
-        sx={{ display: "flex", flexDirection: "column", gap: 2 }}
-      >
-        <TextField
-          label="Username"
+    <Container>
+      <h2>Register (Physical)</h2>
+      {error && <ErrorMsg>{error}</ErrorMsg>}
+      {msg && <SuccessMsg>{msg}</SuccessMsg>}
+      <Form onSubmit={handleSubmit}>
+        <input
+          placeholder="Username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           required
         />
-
-        <TextField
-          label="Parol"
+        <input
+          placeholder="Parol"
           type="password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
-
-        <TextField
-          label="Telefon raqami"
-          type="tel"
-          placeholder="+998901234567"
-          value={phoneNumber}
-          onChange={(e) => setPhoneNumber(e.target.value)}
+        <input
+          placeholder="Telefon raqami (+998...)"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
           required
         />
-
-        <Button variant="contained" color="primary" type="submit">
-          Ro'yxatdan o'tish
-        </Button>
-      </Box>
+        <button type="submit">Submit</button>
+      </Form>
     </Container>
   );
 }
 
-export default RegisterPhysicalPage;
+const Container = styled.div`
+  max-width: 600px;
+  margin: 2rem auto;
+`;
+const ErrorMsg = styled.div`
+  background: #ffe3e3;
+  color: #900;
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+`;
+const SuccessMsg = styled.div`
+  background: #e3ffe7;
+  color: #090;
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+`;
+const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  input {
+    padding: 0.5rem;
+    border: 1px solid #ccc;
+  }
+  button {
+    background: #333;
+    color: #fff;
+    border: none;
+    padding: 0.5rem;
+    cursor: pointer;
+  }
+`;

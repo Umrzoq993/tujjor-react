@@ -1,36 +1,66 @@
+// src/pages/user/MyShipmentsPage.jsx
 import React, { useEffect, useState } from "react";
+import styled from "styled-components";
 import { listShipments } from "../../api/shipments";
 
-function MyShipments() {
+export default function MyShipments() {
   const [shipments, setShipments] = useState([]);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    fetchData();
+    loadShipments();
   }, []);
 
-  async function fetchData() {
+  async function loadShipments() {
     try {
       const data = await listShipments();
-      // backendda role bo‘yicha filter, user faqat o‘z yuklarini ko‘radi
-      setShipments(data);
+      // Agar paginatsiya javobi bo'lsa, data.results bo'ladi, aks holda data array bo'lishi mumkin.
+      const shipmentsArray = Array.isArray(data) ? data : data.results || [];
+      setShipments(shipmentsArray);
     } catch (err) {
-      console.error(err);
+      setError(err.response?.data?.detail || "Xatolik yuz berdi");
     }
   }
 
   return (
-    <div>
+    <Container>
       <h2>My Shipments</h2>
-      <ul>
-        {shipments.map((sh) => (
-          <li key={sh.id}>
-            Tracking: {sh.tracking_code}, Status: {sh.status}, Price: {sh.price}
-            , Created: {sh.created_at}
-          </li>
+      {error && <ErrorMsg>{error}</ErrorMsg>}
+      <ShipmentList>
+        {shipments.map((s) => (
+          <ShipmentItem key={s.id}>
+            <strong>Tracking:</strong> {s.tracking_code}{" "}
+            <strong>Status:</strong> {s.status} <strong>Price:</strong>{" "}
+            {s.price}
+          </ShipmentItem>
         ))}
-      </ul>
-    </div>
+      </ShipmentList>
+    </Container>
   );
 }
 
-export default MyShipments;
+const Container = styled.div`
+  max-width: 800px;
+  margin: 2rem auto;
+  padding: 1rem;
+`;
+
+const ErrorMsg = styled.div`
+  background: #ffe3e3;
+  color: #900;
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+  border-left: 3px solid #f00;
+`;
+
+const ShipmentList = styled.ul`
+  list-style: none;
+  padding: 0;
+`;
+
+const ShipmentItem = styled.li`
+  margin-bottom: 0.5rem;
+  background: #fafafa;
+  border: 1px solid #ccc;
+  padding: 0.5rem;
+`;

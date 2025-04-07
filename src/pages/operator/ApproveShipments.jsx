@@ -1,51 +1,74 @@
+// src/pages/operator/ApproveShipmentsPage.jsx
 import React, { useEffect, useState } from "react";
-import { listShipments } from "../../api/shipments";
+import styled from "styled-components";
+import { listShipments, approveShipment } from "../../api/shipments";
 
-function ApproveShipments() {
+export default function ApproveShipmentsPage() {
   const [pending, setPending] = useState([]);
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    loadData();
-  }, [page, search]);
+    load();
+  }, []);
 
-  async function loadData() {
+  async function load() {
     try {
-      const data = await listShipments({
-        page,
-        status: "client_created",
-        search,
-      });
-      setPending(data.results || data); // agar DRF pagination
+      const data = await listShipments({ status: "client_created" });
+      setPending(data);
     } catch (err) {
-      console.error(err);
+      setError(err.response?.data?.detail || "Xatolik");
+    }
+  }
+
+  async function handleApprove(id) {
+    try {
+      await approveShipment(id);
+      setPending((prev) => prev.filter((p) => p.id !== id));
+    } catch (err) {
+      setError("Approve xatolik: " + err.response?.data?.detail);
     }
   }
 
   return (
-    <div>
-      <h3>Shipments to Approve</h3>
-      <div>
-        <input
-          placeholder="Search..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
-      <ul>
+    <Container>
+      <h2>Approve Shipments</h2>
+      {error && <ErrorMsg>{error}</ErrorMsg>}
+      <List>
         {pending.map((p) => (
           <li key={p.id}>
             {p.tracking_code} - {p.receiver_name}
+            <button onClick={() => handleApprove(p.id)}>Approve</button>
           </li>
         ))}
-      </ul>
-      <button onClick={() => setPage(page - 1)} disabled={page === 1}>
-        Prev
-      </button>
-      <button onClick={() => setPage(page + 1)}>Next</button>
-    </div>
+      </List>
+    </Container>
   );
 }
 
-export default ApproveShipments;
+const Container = styled.div`
+  max-width: 800px;
+  margin: 2rem auto;
+`;
+const ErrorMsg = styled.div`
+  background: #ffe3e3;
+  color: #900;
+  margin-bottom: 1rem;
+  padding: 0.5rem;
+`;
+const List = styled.ul`
+  list-style: none;
+  li {
+    margin-bottom: 0.5rem;
+    background: #fff;
+    border: 1px solid #ccc;
+    padding: 0.5rem;
+    button {
+      margin-left: 1rem;
+      background: #333;
+      color: #fff;
+      border: none;
+      padding: 0.3rem 0.6rem;
+      cursor: pointer;
+    }
+  }
+`;

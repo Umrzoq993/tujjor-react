@@ -1,35 +1,26 @@
-// src/pages/operator/OperatorDashboard.jsx
-import React, { useEffect } from "react";
+// src/pages/operator/OperatorPage.jsx
+import React from "react";
+import styled from "styled-components";
+import { Link } from "react-router-dom";
 
-function OperatorDashboard() {
-  useEffect(() => {
-    // ws://localhost:8000/ws/shipments/
-    const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
-    const socket = new WebSocket(
-      `${wsScheme}://${window.location.host}/ws/shipments/`
-    );
-
-    socket.onopen = () => {
-      console.log("WS connected");
-    };
-    socket.onmessage = (e) => {
-      const data = JSON.parse(e.data);
-      // data: {shipment_id, old_status, new_status,...}
-      alert(
-        `Real-time: Shipment #${data.shipment_id} changed from ${data.old_status} to ${data.new_status}`
-      );
-      // Yoki toast, Redux store update, etc.
-    };
-
-    return () => socket.close();
-  }, []);
-
+export default function OperatorDashboard() {
   return (
-    <div>
-      <h2>Operator Dashboard</h2>
-      <p>Real-time updates will appear as alerts</p>
-    </div>
+    <OperatorContainer>
+      <h1>Operator Dashboard</h1>
+      <p>Quyidagi amallarni bajaring:</p>
+      <ul>
+        <li>
+          <Link to="/operator/approve">Approve Shipments</Link>
+        </li>
+        <li>
+          <Link to="/operator/assign">Assign Courier</Link>
+        </li>
+      </ul>
+    </OperatorContainer>
   );
 }
 
-export default OperatorDashboard;
+const OperatorContainer = styled.div`
+  max-width: 800px;
+  margin: 2rem auto;
+`;
